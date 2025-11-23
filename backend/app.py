@@ -1,20 +1,31 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import os
+import json
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for frontend requests
 
 # Google Sheets setup
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+
+# Try to get credentials from environment variable (as JSON string) or file path
+credentials_json = os.getenv("GOOGLE_CREDENTIALS_JSON")
 credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 
-if not credentials_path:
-    raise EnvironmentError("The GOOGLE_APPLICATION_CREDENTIALS environment variable is not set.")
+if credentials_json:
+    # Parse JSON from environment variable
+    creds_dict = json.loads(credentials_json)
+    credentials = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+elif credentials_path:
+    credentials = ServiceAccountCredentials.from_json_keyfile_name(credentials_path, scope)
+else:
+    raise EnvironmentError("Set GOOGLE_CREDENTIALS_JSON or GOOGLE_APPLICATION_CREDENTIALS environment variable")
 
-credentials = ServiceAccountCredentials.from_json_keyfile_name(credentials_path, scope)
 client = gspread.authorize(credentials)
-sheet = client.open_by_url("https://docs.google.com/spreadsheets/d/1V-IdB0JxLGdnWbdKlWcJRR7j_CUJR3y5CcEG-HOYH4A/edit").sheet1  # Replace "Waitlist" with your Google Sheet name
+sheet = client.open_by_url("https://docs.google.com/spreadsheets/d/1V-IdB0JxLGdnWbdKlWcJRR7j_CUJR3y5CcEG-HOYH4A/edit").sheet1
 
 @app.route('/join', methods=['POST'])
 def join_waitlist():
