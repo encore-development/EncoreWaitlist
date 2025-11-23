@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coming Soon Page</title>
+</head>
+<body>
+  <h1>Coming Soon</h1>
+  <p>Join our waitlist to be notified when the site is live.</p>
+  <form onsubmit="joinWaitlist(event)">
+    <input type="email" id="email" placeholder="Enter your email" required />
+    <button type="submit">Join</button>
+  </form>
+  <script>
+    async function joinWaitlist(event) {
+      event.preventDefault();
+      const email = document.querySelector('#email').value;
+
+      try {
+        const response = await fetch('http://127.0.0.1:5000/join', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email }),
+        });
+
+        const result = await response.json();
+        alert(result.message || 'Something went wrong');
+      } catch (error) {
+        alert('Error connecting to the server');
+      }
+    }
+  </script>
+</body>
+</html>
