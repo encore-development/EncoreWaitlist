@@ -8,36 +8,45 @@ import json
 app = Flask(__name__)
 CORS(app)  # Enable CORS for frontend requests
 
-# Google Sheets setup
-scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+# Google Sheets setup - lazy initialization
+sheet = None
 
-# Try to get credentials from environment variable (as JSON string) or file path
-credentials_json = os.getenv("GOOGLE_CREDENTIALS_JSON")
-credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+def get_sheet():
+    global sheet
+    if sheet is None:
+        scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+        credentials_json = os.getenv("GOOGLE_CREDENTIALS_JSON")
+        credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 
-if credentials_json:
-    # Parse JSON from environment variable
-    creds_dict = json.loads(credentials_json)
-    credentials = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
-elif credentials_path:
-    credentials = ServiceAccountCredentials.from_json_keyfile_name(credentials_path, scope)
-else:
-    raise EnvironmentError("Set GOOGLE_CREDENTIALS_JSON or GOOGLE_APPLICATION_CREDENTIALS environment variable")
+        if credentials_json:
+            creds_dict = json.loads(credentials_json)
+            credentials = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+        elif credentials_path:
+            credentials = ServiceAccountCredentials.from_json_keyfile_name(credentials_path, scope)
+        else:
+            raise EnvironmentError("Set GOOGLE_CREDENTIALS_JSON or GOOGLE_APPLICATION_CREDENTIALS environment variable")
 
-client = gspread.authorize(credentials)
-sheet = client.open_by_url("https://docs.google.com/spreadsheets/d/1V-IdB0JxLGdnWbdKlWcJRR7j_CUJR3y5CcEG-HOYH4A/edit").sheet1
+        client = gspread.authorize(credentials)
+        sheet = client.open_by_url("https://docs.google.com/spreadsheets/d/1V-IdB0JxLGdnWbdKlWcJRR7j_CUJR3y5CcEG-HOYH4A/edit").sheet1
+    return sheet
 
-@app.route('/join', methods=['POST'])
+@app.route('/join', methods=['POST', 'OPTIONS'])
 def join_waitlist():
-    data = request.json
-    email = data.get('email')
+    if request.method == 'OPTIONS':
+        return '', 200
 
-    if not email:
-        return jsonify({"error": "Email is required"}), 400
+    try:
+        data = request.json
+        email = data.get('email')
 
-    # Add email to Google Sheet
-    sheet.append_row([email])
-    return jsonify({"message": "Email added successfully"}), 200
+        if not email:
+            return jsonify({"error": "Email is required"}), 400
+
+        # Add email to Google Sheet
+        get_sheet().append_row([email])
+        return jsonify({"message": "Email added successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/')
 def home():
