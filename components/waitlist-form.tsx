@@ -14,12 +14,23 @@ export default function WaitlistForm() {
     setIsLoading(true);
 
     try {
-      // Simulate form submission - replace with your API endpoint
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/join`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to join waitlist');
+      }
+
       setIsSuccess(true);
       setEmail('');
     } catch (error) {
       console.error('Error:', error);
+      alert('Failed to join waitlist. Please try again.');
     } finally {
       setIsLoading(false);
     }
